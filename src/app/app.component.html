@@ -1,11 +1,14 @@
-<h1>Hello, {{ title }} - {{ points }} points</h1>
+<h1>Najdi čísla, která dají dohromady {{ target }}</h1>
+
+<h2>Máš {{ points }} bodů</h2>
 
 @for (row of numberGrid; track $index; let i = $index) {
   <div>
     @for (number of row; track $index; let j = $index) {
-      <div style="display: inline-block; width: 30px; text-align: center;"
+      <div class="tile"
            (click)="clicked(i, j)"
-           [class.selected]="selectedRow === i && selectedCol === j">
+           [class.selected]="selectedRow === i && selectedCol === j"
+           >
         {{ number }}
       </div>
     }

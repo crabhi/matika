@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { trigger, state, style, animate, transition } from '@angular/animations';
 import { RouterOutlet } from '@angular/router';
 
 @Component({
@@ -7,6 +8,17 @@ import { RouterOutlet } from '@angular/router';
   imports: [RouterOutlet],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
+  animations: [
+    trigger('fadeInOut', [
+      state('void', style({ opacity: 0 })),
+      transition(':enter', [ // fade in
+        animate('500ms ease-in', style({ opacity: 1 }))
+      ]),
+      transition(':leave', [ // fade out
+        animate('500ms ease-out', style({ opacity: 0 }))
+      ])
+    ])
+  ],
 })
 export class AppComponent {
   title = 'matika';
