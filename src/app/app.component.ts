@@ -30,9 +30,9 @@ export class AppComponent {
   points = 0;
 
   constructor() {
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 6; i++) {
       this.numberGrid.push([]);
-      for (let j = 0; j < 10; j++) {
+      for (let j = 0; j < 6; j++) {
         this.numberGrid[i].push(this.getRandomNumber(1, 9));
       }
     }
