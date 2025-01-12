@@ -28,14 +28,37 @@ export class AppComponent {
   selectedCol: number | null = null;
   target = 10;
   points = 0;
+  enemyPos = 0;
+  TILE_SIZE = 50;
+  finished = false;
 
   constructor() {
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 3; i++) {
       this.numberGrid.push([]);
       for (let j = 0; j < 6; j++) {
         this.numberGrid[i].push(this.getRandomNumber(1, 9));
       }
     }
+    console.log(this)
+    setTimeout(() => this.moveUp(), 500)
+  }
+
+  click() {
+      this.moveUp()
+  }
+
+  moveUp() {
+    this.enemyPos -= 1;
+    if (this.enemyPos < -this.TILE_SIZE - 1) {
+      this.enemyPos = 0;
+      this.numberGrid.pop();
+      if (this.numberGrid.length === 0) {
+        this.finished = true;
+        return
+      }
+      console.log(this.numberGrid)
+    }
+    setTimeout(() => this.moveUp(), 50)
   }
 
   getRandomNumber(min: number, max: number): number {
@@ -46,14 +69,17 @@ export class AppComponent {
     if (this.selectedRow === null || this.selectedCol === null) {
       this.selectedRow = i;
       this.selectedCol = j;
-    } else {
-      if (this.numberGrid[this.selectedRow][this.selectedCol] + this.numberGrid[i][j] === this.target) {
+    } else if (this.selectedRow === i && this.selectedCol === j) {
+      this.selectedCol = this.selectedRow = null;
+    } else if (this.numberGrid[this.selectedRow][this.selectedCol] + this.numberGrid[i][j] === this.target) {
         this.numberGrid[this.selectedRow][this.selectedCol] = this.getRandomNumber(1, 9);
         this.numberGrid[i][j] = this.getRandomNumber(1, 9);
         this.points += 1;
-      }
-      this.selectedCol = null;
-      this.selectedRow = null;
+        this.selectedCol = null;
+        this.selectedRow = null;
+    } else {
+      this.selectedRow = i;
+      this.selectedCol = j;
     }
   }
 }
