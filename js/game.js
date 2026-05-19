@@ -46,6 +46,23 @@
     '....R....',
   ];
 
+  // On a Czech QWERTZ keyboard, the top row produces diacritics unshifted
+  // (+ ě š č ř ž ý á í é) and digits only with Shift. For the numeric answer
+  // input, treat the physical top row as digits regardless of Shift.
+  function remapCzechDigit(ev) {
+    if (ev.shiftKey || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (!ev.code || !ev.code.startsWith('Digit')) return;
+    const digit = ev.code.slice(5);  // 'Digit3' -> '3'
+    if (digit.length !== 1 || digit < '0' || digit > '9') return;
+    ev.preventDefault();
+    const input = ev.target;
+    const start = input.selectionStart ?? input.value.length;
+    const end   = input.selectionEnd   ?? input.value.length;
+    input.value = input.value.slice(0, start) + digit + input.value.slice(end);
+    const pos = start + 1;
+    input.setSelectionRange(pos, pos);
+  }
+
   function heartSVG(empty) {
     const red   = empty ? '#3a3a3a' : '#d63b3b';
     const light = empty ? '#6a6a6a' : '#ffb3b3';
@@ -558,7 +575,10 @@
         inputmode: 'numeric',
         pattern: '-?[0-9]*',
         autocomplete: 'off',
-        onkeydown: (ev) => { if (ev.key === 'Enter') submitAnswer(); },
+        onkeydown: (ev) => {
+          if (ev.key === 'Enter') { submitAnswer(); return; }
+          remapCzechDigit(ev);
+        },
       });
       const submitBtn = el('button', { class: 'btn primary', onclick: submitAnswer }, 'Odeslat');
       panel.appendChild(el('div', { class: 'answer-row' }, input, submitBtn));
