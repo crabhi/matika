@@ -1,0 +1,50 @@
+[
+  {
+    "id": "steve",
+    "name": "Štěpán"
+  },
+  {
+    "id": "alex",
+    "name": "Alex"
+  },
+  {
+    "id": "zombie",
+    "name": "Zombík"
+  },
+  {
+    "id": "skeleton",
+    "name": "Kostlivec"
+  },
+  {
+    "id": "creeper",
+    "name": "Creeper"
+  },
+  {
+    "id": "enderman",
+    "name": "Enderman"
+  },
+  {
+    "id": "witch",
+    "name": "Čarodějnice"
+  },
+  {
+    "id": "pigman",
+    "name": "Prasečák"
+  },
+  {
+    "id": "wither",
+    "name": "Wither"
+  },
+  {
+    "id": "villager",
+    "name": "Vesničan"
+  },
+  {
+    "id": "pillager",
+    "name": "Drancíř"
+  },
+  {
+    "id": "knight",
+    "name": "Rytíř"
+  }
+]
