@@ -32,3 +32,9 @@ preserved.
 You're in a sandbox. Make best use of the tools you have so that you don't have to ask for approval
 (avoid bash operators, `cd` compound commands etc.) and don't try to escape from sandbox. Web search
 for reference is completely okay.
+
+## Deployment
+
+This game should be testable from a local folder. The production deployment is via GH Pages. Make
+sure that anything that's not needed in production is stripped before deployment (such as the tools/
+folder).
