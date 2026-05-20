@@ -12,7 +12,7 @@
   const LIVES_PER_LEVEL = 3;
   const EXERCISES_PER_LEVEL = 10;
   const STORAGE_PLAYERS = 'matika.players';
-  const STORAGE_CURRENT = 'matika.currentId';
+  const STORAGE_CURRENT = 'matika.currentPlayerId';
 
   // The character roster — must match assets/characters/<id>/lv<n>.png
   const CHARACTERS = [
@@ -201,6 +201,120 @@
   }
 
   // -----------------------------------------------------------------
+  // Save / Load (download / upload localStorage as JSON)
+  // -----------------------------------------------------------------
+
+  const SAVE_FORMAT = 'matika-save';
+  const SAVE_VERSION = 1;
+
+  function downloadSave() {
+    const data = {
+      format: SAVE_FORMAT,
+      version: SAVE_VERSION,
+      exportedAt: new Date().toISOString(),
+      players: state.players,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `matika-save-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  function validateSave(obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+      return 'Záloha není objekt.';
+    }
+    if (obj.format !== SAVE_FORMAT) return 'Soubor není záloha hry Matika.';
+    if (obj.version !== SAVE_VERSION) return `Verze zálohy ${obj.version} není podporovaná.`;
+    if (!Array.isArray(obj.players)) return 'Seznam hráčů chybí nebo je poškozený.';
+    const charIds = new Set(CHARACTERS.map(c => c.id));
+    for (let i = 0; i < obj.players.length; i++) {
+      const p = obj.players[i];
+      const tag = `Hráč #${i + 1}`;
+      if (!p || typeof p !== 'object' || Array.isArray(p)) return `${tag}: neplatný formát.`;
+      if (typeof p.id !== 'string' || !p.id) return `${tag}: chybí ID.`;
+      if (typeof p.name !== 'string' || !p.name) return `${tag}: chybí jméno.`;
+      if (typeof p.charId !== 'string' || !charIds.has(p.charId)) return `${tag} (${p.name}): neznámá postava "${p.charId}".`;
+      if (typeof p.level !== 'number' || !Number.isFinite(p.level) || p.level < 1 || p.level > MAX_LEVEL) return `${tag} (${p.name}): neplatná úroveň.`;
+      if (p.gameId != null && typeof p.gameId !== 'string') return `${tag} (${p.name}): neplatná hra.`;
+    }
+    // currentId is no longer used by import; old save files may still contain
+    // it. Tolerate the field if present (any type) and ignore it.
+    return null;
+  }
+
+  function uploadSave() {
+    const fi = document.createElement('input');
+    fi.type = 'file';
+    fi.accept = 'application/json,.json';
+    fi.addEventListener('change', () => {
+      const file = fi.files && fi.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onerror = () => alert('Nepodařilo se přečíst soubor.');
+      reader.onload = () => {
+        let parsed;
+        try {
+          parsed = JSON.parse(reader.result);
+        } catch (e) {
+          alert('Soubor není platný JSON.\n\n' + e.message);
+          return;
+        }
+        const err = validateSave(parsed);
+        if (err) {
+          alert('Záloha je neplatná: ' + err);
+          return;
+        }
+        // Normalize incoming records (validateSave already vetted shape).
+        const incoming = parsed.players.map(p => ({
+          id: p.id,
+          name: p.name,
+          charId: p.charId,
+          level: Math.round(p.level),
+          gameId: p.gameId || DEFAULT_GAME,
+        }));
+
+        // Merge by id: existing players are kept; same-id collisions are
+        // overwritten by the imported record; new ids are appended.
+        const byId = new Map(state.players.map(p => [p.id, p]));
+        let overwritten = 0, addedNew = 0;
+        for (const p of incoming) {
+          if (byId.has(p.id)) overwritten++; else addedNew++;
+          byId.set(p.id, p);
+        }
+        if (overwritten > 0) {
+          const ok = confirm(
+            `Soubor obsahuje ${incoming.length} hráčů: ${addedNew} nových, ${overwritten} přepíše stávající. Pokračovat?`,
+          );
+          if (!ok) return;
+        }
+
+        stopTimer();
+        clearRevealListener();
+        state.run = null;
+        state.players = Array.from(byId.values());
+
+        // Keep the existing active profile if it still exists; otherwise
+        // fall back to the first player. (The save file no longer carries
+        // currentId — it's a per-device preference, not part of the export.)
+        if (!state.currentId || !state.players.find(p => p.id === state.currentId)) {
+          state.currentId = state.players[0]?.id || null;
+        }
+
+        savePlayers();
+        state.screen = state.players.length === 0 ? 'register' : 'home';
+        alert(`Načteno: ${incoming.length} hráčů (${addedNew} nových, ${overwritten} přepsáno).`);
+        render();
+      };
+      reader.readAsText(file);
+    });
+    fi.click();
+  }
+
+  // -----------------------------------------------------------------
   // Exercise generator (delegates to the player's current game)
   // -----------------------------------------------------------------
 
@@ -361,6 +475,11 @@
         onclick: () => { state.screen = 'home'; render(); },
       }, 'Zpět'));
     }
+    buttons.appendChild(el('button', {
+      class: 'btn ghost',
+      onclick: uploadSave,
+      title: 'Načíst data uložená z jiného prohlížeče',
+    }, 'Načíst'));
     panel.appendChild(buttons);
 
     return panel;
@@ -500,6 +619,12 @@
         class: 'btn',
         onclick: () => { state.screen = 'register'; render(); },
       }, 'Přidat hráče'),
+    ));
+
+    // Save / Load
+    panel.appendChild(el('div', { class: 'btn-row', style: 'margin-top:24px;' },
+      el('button', { class: 'btn', onclick: downloadSave }, 'Uložit'),
+      el('button', { class: 'btn', onclick: uploadSave }, 'Načíst'),
     ));
 
     return panel;
@@ -865,9 +990,11 @@
   function init() {
     state.players = loadPlayers();
     state.currentId = localStorage.getItem(STORAGE_CURRENT) || null;
-    // Validate current
-    if (state.currentId && !state.players.find(p => p.id === state.currentId)) {
+    // If currentPlayerId is missing or stale, fall back to the first player
+    // so the user lands on the home screen instead of registration.
+    if (!state.currentId || !state.players.find(p => p.id === state.currentId)) {
       state.currentId = state.players[0]?.id || null;
+      if (state.currentId) savePlayers();
     }
     state.screen = state.players.length === 0 ? 'register' : 'home';
     render();

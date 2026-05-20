@@ -38,3 +38,9 @@ for reference is completely okay.
 This game should be testable from a local folder. The production deployment is via GH Pages. Make
 sure that anything that's not needed in production is stripped before deployment (such as the tools/
 folder).
+
+## Save/Load
+
+The state is stored in local storage but can be transferred via browsers or origins via the "save to
+file, then load elsewhere" functionality. Keep backward compatibility for save files unless breakage
+is explicitly confirmed by the user.
