@@ -163,7 +163,7 @@
   const state = {
     screen: 'register',          // 'register' | 'home' | 'exercise' | 'levelUp' | 'levelFailed' | 'completed'
     players: [],
-    currentId: null,
+    currentPlayerId: null,
     // transient run state (set on 'exercise' screen)
     run: null,                   // { lives, progress, exercise, deadline, lastFeedback }
   };
@@ -185,15 +185,15 @@
 
   function savePlayers() {
     localStorage.setItem(STORAGE_PLAYERS, JSON.stringify(state.players));
-    if (state.currentId) {
-      localStorage.setItem(STORAGE_CURRENT, state.currentId);
+    if (state.currentPlayerId) {
+      localStorage.setItem(STORAGE_CURRENT, state.currentPlayerId);
     } else {
       localStorage.removeItem(STORAGE_CURRENT);
     }
   }
 
   function currentPlayer() {
-    return state.players.find(p => p.id === state.currentId) || null;
+    return state.players.find(p => p.id === state.currentPlayerId) || null;
   }
 
   function newId() {
@@ -241,8 +241,8 @@
       if (typeof p.level !== 'number' || !Number.isFinite(p.level) || p.level < 1 || p.level > MAX_LEVEL) return `${tag} (${p.name}): neplatná úroveň.`;
       if (p.gameId != null && typeof p.gameId !== 'string') return `${tag} (${p.name}): neplatná hra.`;
     }
-    // currentId is no longer used by import; old save files may still contain
-    // it. Tolerate the field if present (any type) and ignore it.
+    // Old save files may include extra fields (e.g. a previously-active
+    // player id) that we no longer use. Tolerated and ignored.
     return null;
   }
 
@@ -298,10 +298,10 @@
         state.players = Array.from(byId.values());
 
         // Keep the existing active profile if it still exists; otherwise
-        // fall back to the first player. (The save file no longer carries
-        // currentId — it's a per-device preference, not part of the export.)
-        if (!state.currentId || !state.players.find(p => p.id === state.currentId)) {
-          state.currentId = state.players[0]?.id || null;
+        // fall back to the first player. (The save file does not carry the
+        // active-player selection — it's a per-device preference.)
+        if (!state.currentPlayerId || !state.players.find(p => p.id === state.currentPlayerId)) {
+          state.currentPlayerId = state.players[0]?.id || null;
         }
 
         savePlayers();
@@ -502,7 +502,7 @@
       gameId: registerDraft.gameId || DEFAULT_GAME,
     };
     state.players.push(player);
-    state.currentId = player.id;
+    state.currentPlayerId = player.id;
     savePlayers();
     registerDraft = { name: '', charId: 'steve', gameId: DEFAULT_GAME };
     state.screen = 'home';
@@ -593,10 +593,10 @@
     const list = el('div', { class: 'players-list' });
     for (const p of state.players) {
       const row = el('div', {
-        class: 'player-row' + (p.id === state.currentId ? ' active' : ''),
+        class: 'player-row' + (p.id === state.currentPlayerId ? ' active' : ''),
         onclick: (ev) => {
           if (ev.target.classList.contains('del')) return;
-          state.currentId = p.id;
+          state.currentPlayerId = p.id;
           savePlayers();
           render();
         },
@@ -645,8 +645,8 @@
   function deletePlayer(id) {
     if (!confirm('Opravdu chceš smazat tohoto hráče?')) return;
     state.players = state.players.filter(p => p.id !== id);
-    if (state.currentId === id) {
-      state.currentId = state.players[0]?.id || null;
+    if (state.currentPlayerId === id) {
+      state.currentPlayerId = state.players[0]?.id || null;
     }
     savePlayers();
     if (state.players.length === 0) {
@@ -989,12 +989,12 @@
 
   function init() {
     state.players = loadPlayers();
-    state.currentId = localStorage.getItem(STORAGE_CURRENT) || null;
+    state.currentPlayerId = localStorage.getItem(STORAGE_CURRENT) || null;
     // If currentPlayerId is missing or stale, fall back to the first player
     // so the user lands on the home screen instead of registration.
-    if (!state.currentId || !state.players.find(p => p.id === state.currentId)) {
-      state.currentId = state.players[0]?.id || null;
-      if (state.currentId) savePlayers();
+    if (!state.currentPlayerId || !state.players.find(p => p.id === state.currentPlayerId)) {
+      state.currentPlayerId = state.players[0]?.id || null;
+      if (state.currentPlayerId) savePlayers();
     }
     state.screen = state.players.length === 0 ? 'register' : 'home';
     render();
