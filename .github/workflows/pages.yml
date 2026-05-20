@@ -28,8 +28,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Strip non-site files
-        # Sprite generator isn't part of the published site
-        run: rm -rf tools
+        run: rm -rf tools CLAUDE.md .claude
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
