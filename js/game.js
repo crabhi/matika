@@ -759,12 +759,27 @@
       panel.appendChild(bar);
     }
 
-    // Question — reveal the answer in 'wrong-reveal' phase
+    // Question — column layout: digits right-aligned, operator to the left of
+    // the second number, horizontal bar, answer (input or revealed text) below.
     const ex = run.exercise;
     const reveal = phase === 'wrong-reveal';
-    panel.appendChild(el('div', { class: 'question center' },
-      reveal ? `${ex.a} ${ex.op} ${ex.b} = ${ex.answer}` : `${ex.a} ${ex.op} ${ex.b} = ?`,
-    ));
+    const numWidth = Math.max(
+      String(ex.a).length, String(ex.b).length, String(ex.answer).length,
+    );
+
+    const col = el('div', {
+      class: 'exercise-column',
+      style: `--col-width:${numWidth}ch`,
+    });
+    col.appendChild(el('span', { class: 'col-op' }, ''));
+    col.appendChild(el('span', { class: 'col-num' }, String(ex.a)));
+    col.appendChild(el('span', { class: 'col-op' }, ex.op));
+    col.appendChild(el('span', { class: 'col-num' }, String(ex.b)));
+    col.appendChild(el('div', { class: 'col-bar' }));
+    col.appendChild(el('span', { class: 'col-op' }, ''));
+    col.appendChild(el('span', { class: 'col-num' }, reveal ? String(ex.answer) : '?'));
+
+    panel.appendChild(el('div', { class: 'center' }, col));
 
     if (phase === 'asking') {
       const flash = run.flashCorrect;

@@ -456,18 +456,37 @@ img {
 
 .pip.done { background: var(--grass-top); }
 
-.question {
-  font-size: 64px;
-  font-weight: bold;
-  letter-spacing: 4px;
-  margin: 24px 0 8px;
+/* Schoolbook column layout for the current exercise */
+.exercise-column {
+  display: inline-grid;
+  grid-template-columns: 1.4ch var(--col-width, 4ch);
+  column-gap: 14px;
+  row-gap: 4px;
   font-family: "Courier New", monospace;
+  font-size: 56px;
+  font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  margin: 18px 0 6px;
+  letter-spacing: 2px;
 }
 
+.col-op  { text-align: center; }
+.col-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.col-bar {
+  grid-column: 1 / -1;
+  border-top: 6px solid var(--ink);
+  margin: 6px 0;
+}
+
+/* Answer input + submit row, shown below the column */
 .answer-row {
   display: flex;
   gap: 12px;
   align-items: center;
+  justify-content: center;
+  margin-top: 14px;
 }
 
 .answer-row input {
