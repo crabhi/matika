@@ -83,12 +83,60 @@
     return Math.max(6, 33 - level * 3);
   }
 
-  function maxOperandFor(level) {
-    return Math.min(999, 20 + level * 100);
+  function randInt(lo, hi) {
+    return Math.floor(Math.random() * (hi - lo + 1)) + lo;
   }
 
-  function operationsFor(level) {
-    return level <= 1 ? ['+'] : ['+', '-'];
+  // Available math games. Each defines its own exercise generator.
+  const GAMES = {
+    add_sub_999: {
+      id: 'add_sub_999',
+      name: 'Sčítání a odčítání 0–999',
+      short: '0–999',
+      description: 'Sčítání a odčítání s rostoucí obtížností až do 999.',
+      generate: (level) => {
+        const maxN = Math.min(999, 20 + level * 100);
+        const ops = level <= 1 ? ['+'] : ['+', '-'];
+        const op = ops[Math.floor(Math.random() * ops.length)];
+        let a, b, answer;
+        if (op === '+') {
+          a = randInt(0, maxN);
+          b = randInt(0, Math.min(maxN, 999 - a));
+          answer = a + b;
+        } else {
+          a = randInt(0, maxN);
+          b = randInt(0, a);
+          answer = a - b;
+        }
+        return { a, b, op, answer };
+      },
+    },
+    add_10: {
+      id: 'add_10',
+      name: 'Sčítání 0–10',
+      short: '0–10',
+      description: 'Sčítání i odčítání, čísla 0 až 10. Pro začátečníky.',
+      generate: () => {
+        const op = Math.random() < 0.5 ? '+' : '-';
+        let a, b, answer;
+        if (op === '+') {
+          a = randInt(0, 10);
+          b = randInt(0, 10);
+          answer = a + b;
+        } else {
+          a = randInt(0, 10);
+          b = randInt(0, a);
+          answer = a - b;
+        }
+        return { a, b, op, answer };
+      },
+    },
+  };
+  const GAME_LIST = Object.values(GAMES);
+  const DEFAULT_GAME = 'add_sub_999';
+
+  function gameFor(player) {
+    return GAMES[player.gameId] || GAMES[DEFAULT_GAME];
   }
 
   // Reward labels — what new item the player gets by reaching level N
@@ -153,28 +201,11 @@
   }
 
   // -----------------------------------------------------------------
-  // Exercise generator
+  // Exercise generator (delegates to the player's current game)
   // -----------------------------------------------------------------
 
-  function randInt(lo, hi) {
-    return Math.floor(Math.random() * (hi - lo + 1)) + lo;
-  }
-
-  function generateExercise(level) {
-    const maxN = maxOperandFor(level);
-    const ops = operationsFor(level);
-    const op = ops[Math.floor(Math.random() * ops.length)];
-    let a, b, answer;
-    if (op === '+') {
-      a = randInt(0, maxN);
-      b = randInt(0, Math.min(maxN, 999 - a));
-      answer = a + b;
-    } else {
-      a = randInt(0, maxN);
-      b = randInt(0, a);                          // non-negative result
-      answer = a - b;
-    }
-    return { a, b, op, answer };
+  function generateExercise(player) {
+    return gameFor(player).generate(player.level);
   }
 
   // -----------------------------------------------------------------
@@ -270,13 +301,13 @@
 
   // ---------------- Register / character pick ----------------------
 
-  let registerDraft = { name: '', charId: 'steve' };
+  let registerDraft = { name: '', charId: 'steve', gameId: DEFAULT_GAME };
 
   function renderRegister() {
     const panel = el('div', { class: 'panel' });
     panel.appendChild(el('h1', {}, 'Matika v Minecraftu'));
     panel.appendChild(el('p', { class: 'intro' },
-      'Vítej! Vyber si postavu a napiš si jméno. Postava se bude vyvíjet, jak budeš zvládat příklady.'));
+      'Vítej! Vyber si hru, postavu a napiš si jméno. Postava se bude vyvíjet, jak budeš zvládat příklady.'));
 
     const nameRow = el('div', { class: 'name-row' },
       el('label', { for: 'pname' }, 'Jméno:'),
@@ -288,6 +319,21 @@
     );
     panel.appendChild(nameRow);
 
+    // Game picker
+    panel.appendChild(el('div', { class: 'section-label' }, 'Vyber hru:'));
+    const games = el('div', { class: 'games-row' });
+    for (const g of GAME_LIST) {
+      games.appendChild(el('div', {
+        class: 'game-card' + (g.id === registerDraft.gameId ? ' selected' : ''),
+        onclick: () => { registerDraft.gameId = g.id; render(); },
+      },
+        el('div', { class: 'name' }, g.name),
+        el('div', { class: 'desc' }, g.description),
+      ));
+    }
+    panel.appendChild(games);
+
+    panel.appendChild(el('div', { class: 'section-label' }, 'Vyber postavu:'));
     const grid = el('div', { class: 'char-grid' });
     for (const c of CHARACTERS) {
       const card = el('div', {
@@ -334,11 +380,12 @@
       name,
       charId: registerDraft.charId,
       level: 1,
+      gameId: registerDraft.gameId || DEFAULT_GAME,
     };
     state.players.push(player);
     state.currentId = player.id;
     savePlayers();
-    registerDraft = { name: '', charId: 'steve' };
+    registerDraft = { name: '', charId: 'steve', gameId: DEFAULT_GAME };
     state.screen = 'home';
     render();
   }
@@ -368,8 +415,8 @@
       el('div', { class: 'value' }, `${player.level} / ${MAX_LEVEL}`),
     ));
     info.appendChild(el('div', { class: 'row' },
-      el('div', { class: 'label' }, 'Typ příkladů'),
-      el('div', {}, 'Sčítání a odčítání 0–999'),
+      el('div', { class: 'label' }, 'Hra'),
+      el('div', {}, gameFor(player).name),
     ));
     info.appendChild(el('div', { class: 'row' },
       el('div', { class: 'label' }, 'Životy na úroveň'),
@@ -404,6 +451,23 @@
 
     homeArea.appendChild(info);
     panel.appendChild(homeArea);
+
+    // Game switcher — switching resets the level
+    panel.appendChild(el('h2', { style: 'margin-top:30px;' }, 'Hra'));
+    const games = el('div', { class: 'games-row' });
+    const currentGameId = gameFor(player).id;
+    for (const g of GAME_LIST) {
+      games.appendChild(el('div', {
+        class: 'game-card' + (g.id === currentGameId ? ' selected' : ''),
+        onclick: () => changeGame(player, g.id),
+      },
+        el('div', { class: 'name' }, g.name),
+        el('div', { class: 'desc' }, g.description),
+      ));
+    }
+    panel.appendChild(games);
+    panel.appendChild(el('p', { class: 'small muted center', style: 'margin-top:6px;' },
+      'Změna hry resetuje úroveň postavy na 1.'));
 
     // Players list
     panel.appendChild(el('h2', { style: 'margin-top:30px;' }, 'Hráči'));
@@ -441,6 +505,18 @@
     return panel;
   }
 
+  function changeGame(player, newGameId) {
+    if (!GAMES[newGameId] || player.gameId === newGameId) return;
+    const msg = player.level > 1
+      ? `Změna hry resetuje úroveň postavy ${player.name} z ${player.level} na 1. Pokračovat?`
+      : `Přepnout na hru "${GAMES[newGameId].name}"?`;
+    if (!confirm(msg)) return;
+    player.gameId = newGameId;
+    player.level = 1;
+    savePlayers();
+    render();
+  }
+
   function deletePlayer(id) {
     if (!confirm('Opravdu chceš smazat tohoto hráče?')) return;
     state.players = state.players.filter(p => p.id !== id);
@@ -461,7 +537,7 @@
       mode: 'level',
       lives: LIVES_PER_LEVEL,
       progress: 0,
-      exercise: generateExercise(player.level),
+      exercise: generateExercise(player),
       timerSec: timerSecondsFor(player.level),
       phase: 'asking',          // 'asking' | 'wrong-pause' | 'wrong-reveal'
       flashCorrect: false,
@@ -476,7 +552,7 @@
       mode: 'training',
       correct: 0,
       incorrect: 0,
-      exercise: generateExercise(player.level),
+      exercise: generateExercise(player),
       phase: 'asking',
       flashCorrect: false,
       isTimeout: false,
@@ -671,7 +747,7 @@
           return;
         }
       }
-      run.exercise = generateExercise(player.level);
+      run.exercise = generateExercise(player);
       run.flashCorrect = true;
       run.phase = 'asking';
       render();
@@ -703,7 +779,7 @@
     const run = state.run;
     const player = currentPlayer();
     if (!run || !player || run.phase !== 'wrong-reveal') return;
-    run.exercise = generateExercise(player.level);
+    run.exercise = generateExercise(player);
     run.phase = 'asking';
     render();
   }
